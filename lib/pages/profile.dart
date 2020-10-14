@@ -14,7 +14,10 @@ class _ProfilePageState extends State<ProfilePage> {
   String uid;
   Stream userstream;
   String username;
+  int following;
+  int followers;
   String profilepic;
+  bool isfollowing;
   bool dataisthere = false;
 
   @override
@@ -28,9 +31,35 @@ class _ProfilePageState extends State<ProfilePage> {
   getCurrentUserInfo() async {
     var firebaseuser = FirebaseAuth.instance.currentUser;
     DocumentSnapshot userdoc = await usercollection.doc(firebaseuser.uid).get();
+    var followersdocuments = await usercollection
+        .doc(firebaseuser.uid)
+        .collection('followers')
+        .get();
+    var followingdocuments = await usercollection
+        .doc(firebaseuser.uid)
+        .collection('following')
+        .get();
+    usercollection
+        .doc(firebaseuser.uid)
+        .collection('followers')
+        .doc(firebaseuser.uid)
+        .get()
+        .then((doc) {
+      if (doc.exists) {
+        setState(() {
+          isfollowing = true;
+        });
+      } else {
+        setState(() {
+          isfollowing = false;
+        });
+      }
+    });
     setState(() {
-      username = userdoc['username'];
-      profilepic = userdoc['profilepic'];
+      username = userdoc.data()['username'];
+      following = followingdocuments.docs.length;
+      followers = followersdocuments.docs.length;
+      profilepic = userdoc.data()['profilepic'];
       dataisthere = true;
     });
   }
@@ -38,14 +67,17 @@ class _ProfilePageState extends State<ProfilePage> {
   getStream() async {
     var firebaseuser = FirebaseAuth.instance.currentUser;
     setState(() {
-      userstream = tweetcollection.where(firebaseuser.uid).snapshots();
+      userstream =
+          tweetcollection.where('uid', isEqualTo: firebaseuser.uid).snapshots();
     });
   }
 
   sharePost(String documentid, String tweet) async {
     Share.text('Flitter', tweet, 'text/plain');
-    DocumentSnapshot document = await tweetcollection.doc(documentid).get();
-    tweetcollection.doc(documentid).update({'shares': document['shares'] + 1});
+    DocumentSnapshot doc = await tweetcollection.doc(documentid).get();
+    tweetcollection
+        .doc(documentid)
+        .update({'shares': doc.data()['shares'] + 1});
   }
 
   getCurrentUserUid() {
@@ -57,9 +89,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   likePost(String documentid) async {
     var firebaseuser = FirebaseAuth.instance.currentUser;
-    DocumentSnapshot document = await tweetcollection.doc(documentid).get();
+    DocumentSnapshot doc = await tweetcollection.doc(documentid).get();
 
-    if (document['likes'].contains(firebaseuser.uid)) {
+    if (doc.data()['likes'].contains(firebaseuser.uid)) {
       tweetcollection.doc(documentid).update({
         'likes': FieldValue.arrayRemove([firebaseuser.uid]),
       });
@@ -72,7 +104,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // _signOut()  {
   //    FirebaseAuth.instance.signOut();
-    
+
   // }
 
   @override
@@ -135,11 +167,11 @@ class _ProfilePageState extends State<ProfilePage> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             Text(
-                              '12',
+                              following.toString(),
                               style: myStyle(20, Colors.black, FontWeight.w600),
                             ),
                             Text(
-                              '20',
+                              followers.toString(),
                               style: myStyle(20, Colors.black, FontWeight.w600),
                             ),
                           ],
@@ -178,19 +210,19 @@ class _ProfilePageState extends State<ProfilePage> {
                               return ListView.builder(
                                 shrinkWrap: true,
                                 physics: NeverScrollableScrollPhysics(),
-                                itemCount: snapshot.data.documents.length,
+                                itemCount: snapshot.data.docs.length,
                                 itemBuilder: (BuildContext context, int index) {
                                   DocumentSnapshot tweetdoc =
-                                      snapshot.data.documents[index];
+                                      snapshot.data.docs[index];
                                   return Card(
                                     child: ListTile(
                                       leading: CircleAvatar(
                                         backgroundColor: Colors.white,
                                         backgroundImage: NetworkImage(
-                                            tweetdoc['profilepic']),
+                                            tweetdoc.data()['profilepic']),
                                       ),
                                       title: Text(
-                                        tweetdoc['username'],
+                                        tweetdoc.data()['username'],
                                         style: myStyle(
                                             20, Colors.black, FontWeight.w500),
                                       ),
@@ -198,22 +230,22 @@ class _ProfilePageState extends State<ProfilePage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          if (tweetdoc['type'] == 1)
+                                          if (tweetdoc.data()['type'] == 1)
                                             Padding(
                                               padding:
                                                   const EdgeInsets.all(8.0),
                                               child: Text(
-                                                tweetdoc['tweet'],
+                                                tweetdoc.data()['tweet'],
                                                 style:
                                                     myStyle(20, Colors.black),
                                               ),
                                             ),
-                                          if (tweetdoc['type'] == 2)
+                                          if (tweetdoc.data()['type'] == 2)
                                             Image(
                                               image: NetworkImage(
-                                                  tweetdoc['image']),
+                                                  tweetdoc.data()['image']),
                                             ),
-                                          if (tweetdoc['type'] == 3)
+                                          if (tweetdoc.data()['type'] == 3)
                                             Padding(
                                               padding:
                                                   const EdgeInsets.all(8.0),
@@ -222,13 +254,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    tweetdoc['tweet'],
+                                                    tweetdoc.data()['tweet'],
                                                     style: myStyle(
                                                         20, Colors.black),
                                                   ),
                                                   Image(
-                                                    image: NetworkImage(
-                                                        tweetdoc['image']),
+                                                    image: NetworkImage(tweetdoc
+                                                        .data()['image']),
                                                   ),
                                                 ],
                                               ),
@@ -245,14 +277,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                                           context,
                                                           MaterialPageRoute(
                                                               builder: (context) =>
-                                                                  CommentPage(
-                                                                      tweetdoc[
-                                                                          'id']))),
+                                                                  CommentPage(tweetdoc
+                                                                          .data()[
+                                                                      'id']))),
                                                       child:
                                                           Icon(Icons.comment)),
                                                   SizedBox(width: 10.0),
                                                   Text(
-                                                    tweetdoc['commentcount']
+                                                    tweetdoc
+                                                        .data()['commentcount']
                                                         .toString(),
                                                     style: myStyle(18),
                                                   ),
@@ -262,8 +295,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                                 children: [
                                                   InkWell(
                                                       onTap: () => likePost(
-                                                          tweetdoc['id']),
-                                                      child: tweetdoc['likes']
+                                                          tweetdoc
+                                                              .data()['id']),
+                                                      child: tweetdoc
+                                                              .data()['likes']
                                                               .contains(uid)
                                                           ? Icon(
                                                               Icons.favorite,
@@ -273,7 +308,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                                               .favorite_border)),
                                                   SizedBox(width: 10.0),
                                                   Text(
-                                                    tweetdoc['likes']
+                                                    tweetdoc
+                                                        .data()['likes']
                                                         .length
                                                         .toString(),
                                                     style: myStyle(18),
@@ -284,12 +320,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                                 children: [
                                                   InkWell(
                                                       onTap: () => sharePost(
-                                                          tweetdoc['id'],
-                                                          tweetdoc['tweet']),
+                                                          tweetdoc.data()['id'],
+                                                          tweetdoc
+                                                              .data()['tweet']),
                                                       child: Icon(Icons.share)),
                                                   SizedBox(width: 10.0),
                                                   Text(
-                                                    tweetdoc['shares']
+                                                    tweetdoc
+                                                        .data()['shares']
                                                         .toString(),
                                                     style: myStyle(18),
                                                   ),
@@ -307,7 +345,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       ],
                     ),
                   ),
-
                 ],
               ),
             )

@@ -20,16 +20,13 @@ class _TweetsPageState extends State<TweetsPage> {
     getCurrentUserUid();
   }
 
-  
-  
-
   sharePost(String documentid, String tweet) async {
     Share.text('Flitter', tweet, 'text/plain');
-    DocumentSnapshot document = await tweetcollection.doc(documentid).get();
-    tweetcollection.doc(documentid).update({'shares': document['shares'] + 1});
+    DocumentSnapshot doc = await tweetcollection.doc(documentid).get();
+    tweetcollection.doc(documentid).update({'shares': doc['shares'] + 1});
   }
 
-  getCurrentUserUid() async{
+  getCurrentUserUid() async {
     var firebaseuser = FirebaseAuth.instance.currentUser;
     setState(() {
       uid = firebaseuser.uid;
@@ -38,9 +35,9 @@ class _TweetsPageState extends State<TweetsPage> {
 
   likePost(String documentid) async {
     var firebaseuser = FirebaseAuth.instance.currentUser;
-    DocumentSnapshot document = await tweetcollection.doc(documentid).get();
+    DocumentSnapshot doc = await tweetcollection.doc(documentid).get();
 
-    if (document['likes'].contains(firebaseuser.uid)) {
+    if (doc.data()['likes'].contains(firebaseuser.uid)) {
       tweetcollection.doc(documentid).update({
         'likes': FieldValue.arrayRemove([firebaseuser.uid]),
       });
@@ -103,46 +100,47 @@ class _TweetsPageState extends State<TweetsPage> {
               return CircularProgressIndicator();
             }
             return ListView.builder(
-              itemCount: snapshot.data.documents.length,
+              itemCount: snapshot.data.docs.length,
               itemBuilder: (BuildContext context, int index) {
-                DocumentSnapshot tweetdoc = snapshot.data.documents[index];
+                DocumentSnapshot tweetdoc = snapshot.data.docs[index];
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.white,
-                      backgroundImage: NetworkImage(tweetdoc['profilepic']),
+                      backgroundImage:
+                          NetworkImage(tweetdoc.data()['profilepic']),
                     ),
                     title: Text(
-                      tweetdoc['username'],
+                      tweetdoc.data()['username'],
                       style: myStyle(20, Colors.black, FontWeight.w500),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (tweetdoc['type'] == 1)
+                        if (tweetdoc.data()['type'] == 1)
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              tweetdoc['tweet'],
+                              tweetdoc.data()['tweet'],
                               style: myStyle(20, Colors.black),
                             ),
                           ),
-                        if (tweetdoc['type'] == 2)
+                        if (tweetdoc.data()['type'] == 2)
                           Image(
-                            image: NetworkImage(tweetdoc['image']),
+                            image: NetworkImage(tweetdoc.data()['image']),
                           ),
-                        if (tweetdoc['type'] == 3)
+                        if (tweetdoc.data()['type'] == 3)
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  tweetdoc['tweet'],
+                                  tweetdoc.data()['tweet'],
                                   style: myStyle(20, Colors.black),
                                 ),
                                 Image(
-                                  image: NetworkImage(tweetdoc['image']),
+                                  image: NetworkImage(tweetdoc.data()['image']),
                                 ),
                               ],
                             ),
@@ -158,11 +156,11 @@ class _TweetsPageState extends State<TweetsPage> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) => CommentPage(
-                                                tweetdoc['id']))),
+                                                tweetdoc.data()['id']))),
                                     child: Icon(Icons.comment)),
                                 SizedBox(width: 10.0),
                                 Text(
-                                  tweetdoc['commentcount'].toString(),
+                                  tweetdoc.data()['commentcount'].toString(),
                                   style: myStyle(18),
                                 ),
                               ],
@@ -170,16 +168,18 @@ class _TweetsPageState extends State<TweetsPage> {
                             Row(
                               children: [
                                 InkWell(
-                                    onTap: () => likePost(tweetdoc['id']),
-                                    child: tweetdoc['likes'].contains(uid)
-                                        ? Icon(
-                                            Icons.favorite,
-                                            color: Colors.red,
-                                          )
-                                        : Icon(Icons.favorite_border)),
+                                    onTap: () =>
+                                        likePost(tweetdoc.data()['id']),
+                                    child:
+                                        tweetdoc.data()['likes'].contains(uid)
+                                            ? Icon(
+                                                Icons.favorite,
+                                                color: Colors.red,
+                                              )
+                                            : Icon(Icons.favorite_border)),
                                 SizedBox(width: 10.0),
                                 Text(
-                                  tweetdoc['likes'].length.toString(),
+                                  tweetdoc.data()['likes'].length.toString(),
                                   style: myStyle(18),
                                 ),
                               ],
@@ -188,11 +188,12 @@ class _TweetsPageState extends State<TweetsPage> {
                               children: [
                                 InkWell(
                                     onTap: () => sharePost(
-                                        tweetdoc['id'], tweetdoc['tweet']),
+                                        tweetdoc.data()['id'],
+                                        tweetdoc.data()['tweet']),
                                     child: Icon(Icons.share)),
                                 SizedBox(width: 10.0),
                                 Text(
-                                  tweetdoc['shares'].toString(),
+                                  tweetdoc.data()['shares'].toString(),
                                   style: myStyle(18),
                                 ),
                               ],

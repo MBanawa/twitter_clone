@@ -22,15 +22,15 @@ class _CommentPageState extends State<CommentPage> {
     DocumentSnapshot userdoc = await usercollection.doc(firebaseuser.uid).get();
     tweetcollection.doc(widget.documentId).collection('comments').doc().set({
       'comment': commentcontroller.text,
-      'username': userdoc['username'],
-      'uid': userdoc['uid'],
-      'profilepic': userdoc['profilepic'],
+      'username': userdoc.data()['username'],
+      'uid': userdoc.data()['uid'],
+      'profilepic': userdoc.data()['profilepic'],
       'time': DateTime.now(),
     });
     DocumentSnapshot commentcount = await tweetcollection.doc(widget.documentId).get();
 
     tweetcollection.doc(widget.documentId).update({
-      'commentcount': commentcount['commentcount'] + 1
+      'commentcount': commentcount.data()['commentcount'] + 1
     });
     commentcontroller.clear();
   }
@@ -64,20 +64,20 @@ class _CommentPageState extends State<CommentPage> {
                     }
                     return ListView.builder(
                       shrinkWrap: true,
-                      itemCount: snapshot.data.documents.length,
+                      itemCount: snapshot.data.docs.length,
                       itemBuilder: (context, index) {
                         DocumentSnapshot commentDoc =
-                            snapshot.data.documents[index];
+                            snapshot.data.docs[index];
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.white,
                             backgroundImage:
-                                NetworkImage(commentDoc['profilepic']),
+                                NetworkImage(commentDoc.data()['profilepic']),
                           ),
                           title: Row(
                             children: [
                               Text(
-                                commentDoc['username'],
+                                commentDoc.data()['username'],
                                 style:
                                     myStyle(20, Colors.black, FontWeight.w500),
                               ),
@@ -85,7 +85,7 @@ class _CommentPageState extends State<CommentPage> {
                                 width: 15.0,
                               ),
                               Text(
-                                commentDoc['comment'],
+                                commentDoc.data()['comment'],
                                 style: myStyle(
                                   20,
                                   Colors.grey.shade700,
@@ -94,7 +94,7 @@ class _CommentPageState extends State<CommentPage> {
                             ],
                           ),
                           subtitle: Text(
-                            tAgo.format(commentDoc['time'].toDate()).toString(),
+                            tAgo.format(commentDoc.data()['time'].toDate()).toString(),
                             style: myStyle(15),
                           ),
                         );
